@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Atendimento</title>
+    <style>
+        :root {
+            --bg-page: #f5f5f7;
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --accent: #0071e3; /* Azul Apple para destaque sutil */
+            --white: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.4fr 0.6fr;
+            width: 98vw;
+            max-width: 1400px;
+            height: 90vh;
+            background: var(--white);
+            border-radius: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .main-display {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #ffffff;
+            position: relative;
+            padding: 20px;
+            transition: background-color 0.3s ease; /* Para o efeito de flash */
+        }
+
+        .info-topo {
+            position: absolute;
+            top: 40px;
+            text-align: center;
+        }
+
+        .data-completa {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            text-transform: capitalize;
+            margin-bottom: 5px;
+        }
+
+        .relogio {
+            font-size: 2.5rem;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .label {
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            color: var(--text-muted);
+            margin-top: 80px;
+        }
+
+        #senha-atual {
+            font-size: 28rem; /* Ajustado para equilíbrio visual */
+            font-weight: 800;
+            line-height: 0.8;
+            margin: 10px 0;
+            letter-spacing: -10px;
+            transition: transform 0.1s ease;
+        }
+
+        .sidebar {
+            background: #fafafc;
+            border-left: 1px solid #efeff4;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .btn-reset {
+            background: none;
+            border: 1px solid #ddd;
+            color: #999;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .btn-reset:hover { background: #eee; color: #666; }
+
+        .lista { flex-grow: 1; }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f0f0;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .item-num { font-size: 2.5rem; font-weight: 600; color: var(--accent); }
+        .item-hora { font-size: 1.1rem; color: var(--text-muted); }
+
+        .btn-chamar {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 25px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn-chamar:hover { background: #000; transform: translateY(-2px); }
+        
+        /* Classe para o efeito de piscar */
+        .flash-active { background-color: #f0f7ff !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <main class="main-display" id="display-principal">
+            <div class="info-topo">
+                <div id="data" class="data-completa"></div>
+                <div id="hora" class="relogio">00:00:00</div>
+            </div>
+            
+            <div class="label">Senha Atual</div>
+            <div id="senha-atual">00</div>
+            <div style="width: 150px; height: 8px; background: var(--bg-page); border-radius: 10px;"></div>
+        </main>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Chamadas Anteriores</h3>
+                <button class="btn-reset" onclick="resetarContador()">Resetar</button>
+            </div>
+            <div id="historico" class="lista"></div>
+            
+            <button class="btn-chamar" onclick="chamar()">Chamar Próxima (Espaço)</button>
+        </aside>
+    </div>
+
+    <audio id="som-campainha" src="som.mp3" preload="auto"></audio>
+
+    <script>
+        // Recupera a última senha salva ou começa em 0
+        let contador = parseInt(localStorage.getItem('ultimaSenha')) || 0;
+        document.getElementById('senha-atual').innerText = contador.toString().padStart(2, '0');
+
+        function atualizarRelogioEData() {
+            const agora = new Date();
+            document.getElementById('hora').innerText = agora.toLocaleTimeString('pt-BR');
+            const opcoes = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('data').innerText = agora.toLocaleDateString('pt-BR', opcoes);
+        }
+        
+        setInterval(atualizarRelogioEData, 1000);
+        atualizarRelogioEData();
+
+        // Atalho de Teclado (Espaço ou Enter)
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                chamar();
+            }
+        });
+
+        function chamar() {
+            contador++;
+            const s = contador.toString().padStart(2, '0');
+            const h = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+
+            // Salva no navegador
+            localStorage.setItem('ultimaSenha', contador);
+
+            const display = document.getElementById('senha-atual');
+            const painel = document.getElementById('display-principal');
+            
+            display.innerText = s;
+
+            // Efeitos Visuais
+            display.style.transform = "scale(1.1)";
+            painel.classList.add('flash-active');
+            
+            setTimeout(() => { 
+                display.style.transform = "scale(1)";
+                painel.classList.remove('flash-active');
+            }, 300);
+
+            // Som
+            const som = document.getElementById('som-campainha');
+            som.currentTime = 0;
+            som.play().catch(e => console.log("Áudio aguardando interação."));
+
+            // Histórico
+            adicionarAoHistorico(s, h);
+        }
+
+        function adicionarAoHistorico(s, h) {
+            const hist = document.getElementById('historico');
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<span class="item-num">${s}</span><span class="item-hora">${h}</span>`;
+            
+            hist.prepend(div);
+            if (hist.children.length > 5) hist.removeChild(hist.lastChild);
+        }
+
+        function resetarContador() {
+            if(confirm("Deseja zerar o contador de senhas?")) {
+                contador = 0;
+                localStorage.setItem('ultimaSenha', 0);
+                document.getElementById('senha-atual').innerText = "00";
+                document.getElementById('historico').innerHTML = "";
+            }
+        }
+    </script>
+</body>
+</html>
