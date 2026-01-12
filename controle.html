@@ -4,86 +4,94 @@
     <meta charset="UTF-8">
     <title>Controle de Atendimento</title>
     <style>
-        :root { --bg-page: #f5f5f7; --text-main: #1d1d1f; --accent: #0071e3; }
+        :root { --bg-page: #f5f5f7; --text-main: #1d1d1f; --accent: #0071e3; --danger: #ff3b30; }
         body { background: var(--bg-page); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 350px; }
-        #hora-atual { font-size: 1.2rem; color: #888; margin-bottom: 10px; }
-        #senha-display { font-size: 6rem; font-weight: bold; color: var(--accent); margin: 10px 0; }
-        .btn-chamar { background: var(--text-main); color: white; border: none; padding: 20px; width: 100%; font-size: 1.2rem; font-weight: 600; border-radius: 15px; cursor: pointer; transition: 0.2s; }
+        .card { background: white; padding: 30px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; width: 360px; }
+        #senha-display { font-size: 6rem; font-weight: 800; color: var(--accent); margin: 10px 0; letter-spacing: -2px; }
+        .btn-chamar { background: var(--text-main); color: white; border: none; padding: 20px; width: 100%; font-size: 1.2rem; font-weight: 600; border-radius: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .btn-chamar:hover { background: #000; transform: scale(1.02); }
-        
-        /* Estilo do Histórico no Controle */
-        .hist-title { margin-top: 25px; font-size: 0.8rem; color: #888; letter-spacing: 2px; text-transform: uppercase; }
-        .lista-hist { margin-top: 10px; text-align: left; }
-        .item-hist { 
-            display: flex; justify-content: space-between; padding: 10px; 
-            border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;
-            border-radius: 8px;
-        }
+        .btn-cancelar { background: none; color: var(--danger); border: 1.5px solid var(--danger); padding: 12px; width: 100%; font-size: 0.9rem; font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-cancelar:hover { background: var(--danger); color: white; }
+        .hist-title { margin-top: 25px; font-size: 0.75rem; color: #aaa; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .item-hist { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f8f8f8; cursor: pointer; transition: 0.2s; border-radius: 8px; margin-top: 5px; }
         .item-hist:hover { background: #f0f7ff; color: var(--accent); }
-        .btn-reset { background: none; border: 1px solid #ddd; margin-top: 15px; cursor: pointer; color: #999; padding: 5px 10px; border-radius: 5px; font-size: 0.7rem; }
+        .btn-reset { background: #f2f2f7; color: #8e8e93; border: none; padding: 10px; width: 100%; border-radius: 12px; cursor: pointer; margin-top: 20px; font-weight: 600; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="hora-atual">00:00:00</div>
-        <div style="letter-spacing: 3px; color: #888; font-size: 0.8rem;">SENHA ATUAL</div>
+        <div id="hora-atual" style="color:#888; margin-bottom: 5px;">00:00:00</div>
+        <div style="font-size: 0.8rem; color: #bbb; font-weight: 600;">SENHA ATUAL</div>
         <div id="senha-display">00</div>
+        
         <button class="btn-chamar" onclick="chamarProxima()">PRÓXIMA (Espaço)</button>
+        <button class="btn-cancelar" onclick="cancelarChamada()">CANCELAR ATUAL</button>
         
-        <div class="hist-title">Rechamar (Clique na senha)</div>
-        <div id="historico-controle" class="lista-hist"></div>
-        
-        <button class="btn-reset" onclick="resetar()">Resetar Contador</button>
+        <div class="hist-title">Rechamar (Clique abaixo)</div>
+        <div id="historico-controle"></div>
+
+        <button class="btn-reset" onclick="resetarSistema()">RESETAR SISTEMA</button>
     </div>
 
     <script>
         let contador = parseInt(localStorage.getItem('ultimaSenha')) || 0;
         document.getElementById('senha-display').innerText = contador.toString().padStart(2, '0');
 
-        function atualizarRelogio() {
+        setInterval(() => {
             document.getElementById('hora-atual').innerText = new Date().toLocaleTimeString('pt-BR');
+        }, 1000);
+
+        function enviarComando(senha, operacao = 'chamada') {
+            const hora = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            localStorage.setItem('ultimaSenha', senha);
+            localStorage.setItem('horaChamada', hora);
+            localStorage.setItem('tipoOperacao', operacao);
+            localStorage.setItem('triggerSinal', Date.now());
+            document.getElementById('senha-display').innerText = senha;
         }
-        setInterval(atualizarRelogio, 1000);
 
         function chamarProxima() {
             contador++;
             const s = contador.toString().padStart(2, '0');
-            enviarChamada(s);
+            enviarComando(s);
             adicionarAoHistoricoControle(s);
         }
 
-        // Função específica para repetir uma senha
-        function enviarChamada(s) {
-            const h = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-            localStorage.setItem('ultimaSenha', s);
-            localStorage.setItem('horaChamada', h);
-            localStorage.setItem('triggerSom', Date.now()); // Dispara o som e flash no painel
-            document.getElementById('senha-display').innerText = s;
+        function cancelarChamada() {
+            if(confirm("Deseja cancelar esta senha?")) {
+                const hist = document.getElementById('historico-controle');
+                if (hist.firstChild) hist.removeChild(hist.firstChild);
+                if (contador > 0) {
+                    contador--;
+                    const sAnterior = contador.toString().padStart(2, '0');
+                    localStorage.setItem('cancelarSinal', Date.now());
+                    enviarComando(sAnterior, 'repeticao'); 
+                }
+            }
         }
 
         function adicionarAoHistoricoControle(s) {
             const container = document.getElementById('historico-controle');
             const div = document.createElement('div');
             div.className = 'item-hist';
-            div.innerHTML = `<span>Senha <strong>${s}</strong></span> <small>Rechamar ↻</small>`;
-            div.onclick = () => enviarChamada(s); // Ao clicar, chama novamente
-            
+            div.innerHTML = `<span>Senha <strong>${s}</strong></span> <small>↻</small>`;
+            div.onclick = () => enviarComando(s, 'repeticao');
             container.prepend(div);
             if (container.children.length > 3) container.removeChild(container.lastChild);
         }
 
-        function resetar() {
-            if(confirm("Deseja zerar o contador?")) {
+        function resetarSistema() {
+            if(confirm("Zerar contador e limpar painel?")) {
                 contador = 0;
-                localStorage.setItem('ultimaSenha', '00');
-                localStorage.setItem('resetarHistorico', Date.now());
-                document.getElementById('senha-display').innerText = "00";
-                document.getElementById('historico-controle').innerHTML = "";
+                localStorage.clear();
+                localStorage.setItem('resetarPainel', Date.now());
+                location.reload();
             }
         }
 
-        document.addEventListener('keydown', (e) => { if (e.code === 'Space' || e.code === 'Enter') chamarProxima(); });
+        document.addEventListener('keydown', (e) => { 
+            if (e.code === 'Space' || e.code === 'Enter') chamarProxima(); 
+        });
     </script>
 </body>
 </html>
