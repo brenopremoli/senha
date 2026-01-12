@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Atendimento</title>
+    <style>
+        /* CSS mantido do original para consistência visual */
+        :root { --bg-page: #f5f5f7; --text-main: #1d1d1f; --text-muted: #86868b; --accent: #0071e3; --white: #ffffff; }
+        body { background-color: var(--bg-page); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .container { display: grid; grid-template-columns: 1.4fr 0.6fr; width: 98vw; max-width: 1400px; height: 90vh; background: var(--white); border-radius: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); overflow: hidden; }
+        .main-display { display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; transition: background-color 0.3s ease; }
+        .info-topo { position: absolute; top: 40px; text-align: center; }
+        .relogio { font-size: 2.5rem; color: var(--text-main); font-weight: 600; }
+        #senha-atual { font-size: 28rem; font-weight: 800; line-height: 0.8; letter-spacing: -10px; transition: transform 0.1s ease; }
+        .sidebar { background: #fafafc; border-left: 1px solid #efeff4; padding: 40px; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #f0f0f0; animation: slideIn 0.4s ease-out; }
+        .item-num { font-size: 2.5rem; font-weight: 600; color: var(--accent); }
+        .flash-active { background-color: #f0f7ff !important; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="main-display" id="display-principal">
+            <div class="info-topo">
+                <div id="data" style="text-transform: capitalize; color: var(--text-muted);"></div>
+                <div id="hora" class="relogio">00:00:00</div>
+            </div>
+            <div style="letter-spacing: 8px; color: var(--text-muted); margin-top: 80px;">SENHA ATUAL</div>
+            <div id="senha-atual">00</div>
+        </main>
+        <aside class="sidebar">
+            <h3 style="letter-spacing: 2px; color: var(--text-muted);">HISTÓRICO</h3>
+            <div id="historico"></div>
+        </aside>
+    </div>
+
+    <audio id="som-campainha" src="som.mp3" preload="auto"></audio>
+
+    <script>
+        function atualizarRelogioEData() {
+            const agora = new Date();
+            document.getElementById('hora').innerText = agora.toLocaleTimeString('pt-BR');
+            document.getElementById('data').innerText = agora.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        setInterval(atualizarRelogioEData, 1000);
+        atualizarRelogioEData();
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'triggerSom') {
+                const senha = localStorage.getItem('ultimaSenha');
+                const hora = localStorage.getItem('horaChamada');
+                executarEfeito(senha, hora);
+            }
+            if (e.key === 'resetarHistorico') {
+                document.getElementById('senha-atual').innerText = "00";
+                document.getElementById('historico').innerHTML = "";
+            }
+        });
+
+        function executarEfeito(s, h) {
+            const display = document.getElementById('senha-atual');
+            const painel = document.getElementById('display-principal');
+            
+            // Som e Flash
+            const som = document.getElementById('som-campainha');
+            som.currentTime = 0;
+            som.play().catch(() => {});
+
+            display.innerText = s;
+            display.style.transform = "scale(1.1)";
+            painel.classList.add('flash-active');
+            
+            setTimeout(() => { 
+                display.style.transform = "scale(1)";
+                painel.classList.remove('flash-active');
+            }, 300);
+
+            // Só adiciona ao histórico se a senha for diferente da última que já está lá
+            const hist = document.getElementById('historico');
+            if (hist.firstChild?.querySelector('.item-num')?.innerText !== s) {
+                adicionarAoHistorico(s, h);
+            }
+        }
+
+        function adicionarAoHistorico(s, h) {
+            const hist = document.getElementById('historico');
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<span class="item-num">${s}</span><span style="color: #888">${h}</span>`;
+            hist.prepend(div);
+            if (hist.children.length > 5) hist.removeChild(hist.lastChild);
+        }
+    </script>
+</body>
+</html>
